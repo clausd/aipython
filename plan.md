@@ -1,59 +1,102 @@
-An AI improved version of the ipython command line
+# AI-Enhanced IPython (aipython)
 
-Basic functionality. Instead of writing python I can ask for an outcome and the REPL will use an AI model to turn this into python instructions. 
+An AI-powered version of IPython that lets you describe what you want instead of writing code.
 
-I will allow 3-10 instructions per AI instruction. This should be configurable in an .aipython config file. 
-Command output is automatically added back to the AI system for context
+## Vision
 
-Also configurable whether to just run python or go into yolo mode and run the commands
+Transform IPython into an AI-first REPL where you can:
+- Describe outcomes instead of writing Python syntax
+- Get contextual help with access to your variables and history
+- Seamlessly blend AI assistance with normal Python workflow
 
-Escapes emulate ipython's shell escape wit with an extra ! thrown on so there are three modes
+## Implementation Plan
 
-AI mode
-! this is now a python command
-!! this is a shell command
-? is AI questions 
+### Phase 1: Basic AI Magic (MVP) ✅
+**Goal**: Prove the concept with simple magic commands
 
-Magic commands still work as per usual so they drop us into python straight away
+**Features**:
+- `%ai <description>` - generates Python code from natural language
+- `%ai? <question>` - asks AI questions about code/context  
+- `%ai -e <description>` - generates and executes code
+- Auto-loads via IPython extension system
+- Uses `ANTHROPIC_API_KEY` environment variable
 
+**Installation**:
+```bash
+pip install aipython
+# Auto-loads on IPython startup via entry points
+```
 
-If possible lean on the history mechanism to store AI instructions and command path. 
+**Usage Examples**:
+```python
+%ai create a pandas dataframe with sample sales data
+%ai -e plot a sine wave with matplotlib
+%ai? what does the variable 'df' contain?
+```
 
-Simplest option is probably to include the AI instructions as a comment block and push that to history with an
+### Phase 2: Enhanced Context & Tools
+**Features**:
+- Access IPython history and variables as AI tools
+- Command output capture and context feeding  
+- Error handling and retry logic
+- Basic configuration file support
 
-# Magics
+### Phase 3: Full AI-First REPL Mode
+**Features**:
+- AI-first input mode (your original vision)
+- Shell escapes (`!`, `!!`, `?`)
+- Configurable instruction limits (3-10 per request)
+- History integration with AI instruction tracking
 
-There's an %ai-config magic to control the AI use and mode use
-There's an %ai magic... for users who want to keep the ipython logic intact but just want help to write the commands
+### Phase 4: Advanced Agent Features
+**Features**:
+- Clipboard integration tools
+- File reference and analysis
+- Output copying magic (`%copy-output`)
+- Multiple AI provider support
+- Advanced context management
 
-%ai writes the next instruction (or 5) with AI
-%ai? lets you ask a question for the bot
+## Technical Architecture
 
-# AI! 
-line at the top for commands, and an 
+### Project Structure
+```
+aipython/
+├── __init__.py           # Package init + IPython extension loading
+├── magic.py             # AI magic commands
+├── ai_client.py         # Claudette wrapper
+├── config.py            # Configuration handling
+└── tools.py             # Context tools (Phase 2+)
+```
 
-# AI?
-for AI questions. 
+### Key Design Decisions
 
+1. **IPython Extension System**: Use standard extension loading via entry points
+2. **Environment-based Auth**: Leverage existing `ANTHROPIC_API_KEY` 
+3. **Pip Installable**: Standard Python package with proper setup.py
+4. **Gradual Enhancement**: Each phase builds on previous functionality
+5. **Claudette Integration**: Use for tool definitions and agent loops
 
-# Agent perf
+### Auto-Loading Strategy
 
-The first and immediate goal is to simply be able to describe what I want instead of remembering e.g. complex panda invocations. The agent is able to use history and variable context to understand requests. To save tokens these are available as tools. 
+The package will auto-load via IPython's extension system using entry points in setup.py:
+```python
+entry_points={
+    'ipython.extensions': [
+        'aipython = aipython:load_ipython_extension',
+    ],
+}
+```
 
-Other tools we want to add are 
-* command execution and feeding command output into the context
-* mentioning clipboard should work
-* A magic to take last command output and copy to clipboard
-* Referencing files just downloaded or in clipboard or just moved - I want to be able to say "Describe the sheet I just downloaded"
+This means after `pip install aipython`, the magic commands are immediately available in any new IPython session.
 
-More will come as we go along - this is already too much to begin with
+## Current Focus
 
+**Phase 1 Implementation**: Building the basic `%ai` magic command with:
+- Natural language to Python code generation
+- Optional execution with `-e` flag
+- Question answering with `%ai?`
+- Environment-based API key detection
+- Proper error handling and user feedback
 
-# How to build it
-
-Down the road we want to be AI agnostic but for now we'll lean hard on Claude through the claudette library (it's convenient for tool definitions and agent loop)
-
-for the REPL control maybe just use what ipython does? Alternately suggest a super snazze version
-
-use the InteractiveShell class for the IPython interaction
+This gives immediate value while building toward the full AI-first REPL vision.
 
