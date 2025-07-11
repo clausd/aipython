@@ -16,12 +16,18 @@ AI mode
 
 Magic commands still work as per usual so they drop us into python straight away
 
-There's a new %ai magic which controls config of the ai system like the settings I mention above
 
 If possible lean on the history mechanism to store AI instructions and command path. 
 
 Simplest option is probably to include the AI instructions as a comment block and push that to history with an
 
+# Magics
+
+There's an %ai-config magic to control the AI use and mode use
+There's an %ai magic... for users who want to keep the ipython logic intact but just want help to write the commands
+
+%ai writes the next instruction (or 5) with AI
+%ai? lets you ask a question for the bot
 
 # AI! 
 line at the top for commands, and an 
@@ -29,7 +35,6 @@ line at the top for commands, and an
 # AI?
 for AI questions. 
 
-You should use the snazziest REPL library in the python world for this. Syntax highlighting - ability to walk back through history and so on is key. 
 
 # Agent perf
 
@@ -42,3 +47,13 @@ Other tools we want to add are
 * Referencing files just downloaded or in clipboard or just moved - I want to be able to say "Describe the sheet I just downloaded"
 
 More will come as we go along - this is already too much to begin with
+
+
+# How to build it
+
+Down the road we want to be AI agnostic but for now we'll lean hard on Claude through the claudette library (it's convenient for tool definitions and agent loop)
+
+for the REPL control maybe just use what ipython does? Alternately suggest a super snazze version
+
+use the InteractiveShell class for the IPython interaction
+
