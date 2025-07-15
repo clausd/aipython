@@ -172,5 +172,5 @@ the user's current session to give more relevant answers."""
         
         return {
             'variables': variables,
-            'history_length': len(ip.history_manager.get_range()) if ip.history_manager else 0
+            'history_length': len(list(ip.history_manager.get_range())) if ip.history_manager else 0
         }
