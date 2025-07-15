@@ -25,12 +25,13 @@ class AIClient:
         self.model = model
         self.client = Client(api_key=self.api_key)
     
-    def generate_code(self, description: str, model: Optional[str] = None) -> str:
+    def generate_code(self, description: str, model: Optional[str] = None, context: Optional[dict] = None) -> str:
         """Generate Python code from natural language description.
         
         Args:
             description: What the user wants to accomplish
             model: Override default model
+            context: Current IPython context (variables, etc.)
             
         Returns:
             Generated Python code as string
@@ -45,12 +46,26 @@ Rules:
 - Code should be ready to execute in IPython
 - Use common libraries (pandas, numpy, matplotlib, etc.) when appropriate
 - Keep code concise but readable
-- Don't include print statements unless specifically requested"""
+- Don't include print statements unless specifically requested
+- Use existing variables when appropriate based on the provided context"""
+
+        # Build user message with context
+        user_message = f"Generate Python code to: {description}"
+        
+        if context and context.get('variables'):
+            user_message += f"\n\nAvailable variables in current session:\n"
+            for var_name, var_info in context['variables'].items():
+                user_message += f"- {var_name}: {var_info['type']}"
+                if var_info.get('shape'):
+                    user_message += f" {var_info['shape']}"
+                if var_info.get('preview'):
+                    user_message += f" = {var_info['preview']}"
+                user_message += "\n"
 
         try:
             response = self.client.chat([
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Generate Python code to: {description}"}
+                {"role": "user", "content": user_message}
             ], model=model)
             
             # Extract code from response
@@ -69,12 +84,13 @@ Rules:
         except Exception as e:
             raise Exception(f"Failed to generate code: {e}")
     
-    def ask_question(self, question: str, model: Optional[str] = None) -> str:
+    def ask_question(self, question: str, model: Optional[str] = None, context: Optional[dict] = None) -> str:
         """Ask the AI a question.
         
         Args:
             question: User's question
             model: Override default model
+            context: Current IPython context (variables, etc.)
             
         Returns:
             AI's response
@@ -83,12 +99,26 @@ Rules:
         
         system_prompt = """You are a helpful Python/data science assistant. 
 Answer questions clearly and concisely. If the question is about code or data analysis, 
-provide practical advice and examples when helpful."""
+provide practical advice and examples when helpful. Use the provided context about 
+the user's current session to give more relevant answers."""
+
+        # Build user message with context
+        user_message = question
+        
+        if context and context.get('variables'):
+            user_message += f"\n\nCurrent session context:\n"
+            for var_name, var_info in context['variables'].items():
+                user_message += f"- {var_name}: {var_info['type']}"
+                if var_info.get('shape'):
+                    user_message += f" {var_info['shape']}"
+                if var_info.get('preview'):
+                    user_message += f" = {var_info['preview']}"
+                user_message += "\n"
 
         try:
             response = self.client.chat([
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question}
+                {"role": "user", "content": user_message}
             ], model=model)
             
             return response.content[0].text.strip()
@@ -97,21 +127,47 @@ provide practical advice and examples when helpful."""
             raise Exception(f"Failed to get answer: {e}")
     
     def get_ipython_context(self) -> dict:
-        """Get current IPython context (variables, history, etc.).
-        
-        This will be expanded in Phase 2 to provide context to the AI.
-        """
+        """Get current IPython context (variables, history, etc.)."""
         from IPython import get_ipython
+        import pandas as pd
+        import numpy as np
         
         ip = get_ipython()
         if not ip:
             return {}
             
-        # Get user namespace variables
-        user_vars = {k: type(v).__name__ for k, v in ip.user_ns.items() 
-                    if not k.startswith('_')}
+        # Get user namespace variables with enhanced info
+        variables = {}
+        for k, v in ip.user_ns.items():
+            if k.startswith('_') or k in ['In', 'Out', 'get_ipython', 'exit', 'quit']:
+                continue
+                
+            var_info = {'type': type(v).__name__}
+            
+            # Add shape info for arrays/dataframes
+            if hasattr(v, 'shape'):
+                var_info['shape'] = str(v.shape)
+            elif hasattr(v, '__len__') and not isinstance(v, str):
+                try:
+                    var_info['shape'] = f"(len={len(v)})"
+                except:
+                    pass
+            
+            # Add preview for small values
+            try:
+                str_repr = str(v)
+                if len(str_repr) <= 100:
+                    var_info['preview'] = str_repr
+                elif isinstance(v, (pd.DataFrame, pd.Series)):
+                    var_info['preview'] = f"columns: {list(v.columns) if hasattr(v, 'columns') else 'N/A'}"
+                elif isinstance(v, np.ndarray):
+                    var_info['preview'] = f"dtype: {v.dtype}"
+            except:
+                pass
+                
+            variables[k] = var_info
         
         return {
-            'variables': user_vars,
-            'history_length': len(ip.history_manager.get_range())
+            'variables': variables,
+            'history_length': len(ip.history_manager.get_range()) if ip.history_manager else 0
         }

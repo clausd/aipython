@@ -37,9 +37,10 @@ class AIMagics(Magics):
             return
             
         try:
-            # Generate code
+            # Generate code with context
             print(f"🤖 Generating code for: {description}")
-            code = self.ai_client.generate_code(description, model=args.model)
+            context = self.ai_client.get_ipython_context()
+            code = self.ai_client.generate_code(description, model=args.model, context=context)
             
             if not code:
                 print("❌ No code generated. Please try rephrasing your request.")
@@ -80,7 +81,8 @@ class AIMagics(Magics):
             
         try:
             print(f"🤖 Thinking about: {question}")
-            answer = self.ai_client.ask_question(question)
+            context = self.ai_client.get_ipython_context()
+            answer = self.ai_client.ask_question(question, context=context)
             print(f"\n💭 {answer}")
             
         except Exception as e:
