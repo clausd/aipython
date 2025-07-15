@@ -30,7 +30,7 @@ class AIMagics(Magics):
             %ai -e plot a sine wave with matplotlib
         """
         args = parse_argstring(self.ai, line)
-        description = args.line if hasattr(args, 'line') else line.strip()
+        description = line.strip()
         
         if not description:
             print("Please provide a description of what you want to do.")

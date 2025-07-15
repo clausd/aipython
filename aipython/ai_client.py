@@ -155,13 +155,16 @@ the user's current session to give more relevant answers."""
             
             # Add preview for small values
             try:
-                str_repr = str(v)
-                if len(str_repr) <= 100:
-                    var_info['preview'] = str_repr
-                elif isinstance(v, (pd.DataFrame, pd.Series)):
-                    var_info['preview'] = f"columns: {list(v.columns) if hasattr(v, 'columns') else 'N/A'}"
+                if isinstance(v, pd.DataFrame):
+                    var_info['preview'] = f"columns: {list(v.columns)}"
+                elif isinstance(v, pd.Series):
+                    var_info['preview'] = f"name: {v.name}"
                 elif isinstance(v, np.ndarray):
                     var_info['preview'] = f"dtype: {v.dtype}"
+                else:
+                    str_repr = str(v)
+                    if len(str_repr) <= 100:
+                        var_info['preview'] = str_repr
             except:
                 pass
                 

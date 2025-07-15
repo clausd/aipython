@@ -95,6 +95,7 @@ class TestContextGathering:
             # Check Series info
             assert variables['series']['type'] == 'Series'
             assert variables['series']['shape'] == '(3,)'
+            assert 'name:' in variables['series']['preview']
             
             # Check numpy array info
             assert variables['array']['type'] == 'ndarray'
