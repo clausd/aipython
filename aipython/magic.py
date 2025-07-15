@@ -22,6 +22,7 @@ class AIMagics(Magics):
               help='Execute the generated code immediately')
     @argument('--model', '-m', default='claude-3-sonnet-20240229',
               help='AI model to use')
+    @argument('description', nargs='*', help='Description of what you want to do')
     def ai(self, line):
         """Generate Python code from natural language description.
         
@@ -30,7 +31,7 @@ class AIMagics(Magics):
             %ai -e plot a sine wave with matplotlib
         """
         args = parse_argstring(self.ai, line)
-        description = line.strip()
+        description = ' '.join(args.description) if args.description else ''
         
         if not description:
             print("Please provide a description of what you want to do.")
