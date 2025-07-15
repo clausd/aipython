@@ -23,7 +23,7 @@ class AIClient:
             )
         
         self.model = model
-        self.client = Client(api_key=self.api_key)
+        self.client = Client(self.api_key)
     
     def generate_code(self, description: str, model: Optional[str] = None, context: Optional[dict] = None) -> str:
         """Generate Python code from natural language description.

@@ -177,11 +177,8 @@ class TestMagicCommandsWithContext:
     
     def test_ai_magic_calls_with_context(self):
         """Test that %ai magic command gathers and passes context."""
-        # Create mock shell
-        mock_shell = Mock()
-        
-        # Create magic instance
-        magic = AIMagics(shell=mock_shell)
+        # Create magic instance without shell (will be None)
+        magic = AIMagics()
         
         # Mock the AI client methods
         magic.ai_client.get_ipython_context = Mock(return_value={
@@ -209,11 +206,8 @@ class TestMagicCommandsWithContext:
     
     def test_ai_question_magic_calls_with_context(self):
         """Test that %ai? magic command gathers and passes context."""
-        # Create mock shell
-        mock_shell = Mock()
-        
-        # Create magic instance
-        magic = AIMagics(shell=mock_shell)
+        # Create magic instance without shell (will be None)
+        magic = AIMagics()
         
         # Mock the AI client methods
         magic.ai_client.get_ipython_context = Mock(return_value={
