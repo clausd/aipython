@@ -2,7 +2,7 @@
 
 import os
 from typing import Optional
-from claudette import Client
+from claudette import Client, Chat
 
 
 class AIClient:
@@ -23,7 +23,7 @@ class AIClient:
             )
         
         self.model = model
-        self.client = Client(self.api_key)
+        self.client = Client(self.api_key, model)
     
     def generate_code(self, description: str, model: Optional[str] = None, context: Optional[dict] = None) -> str:
         """Generate Python code from natural language description.
@@ -63,10 +63,9 @@ Rules:
                 user_message += "\n"
 
         try:
-            response = self.client([
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ], model=model)
+            # Use Chat for better conversation handling
+            chat = Chat(model or self.model, sp=system_prompt)
+            response = chat(user_message)
             
             # Extract code from response
             code = response.content[0].text.strip()
@@ -116,10 +115,9 @@ the user's current session to give more relevant answers."""
                 user_message += "\n"
 
         try:
-            response = self.client([
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ], model=model)
+            # Use Chat for better conversation handling
+            chat = Chat(model or self.model, sp=system_prompt)
+            response = chat(user_message)
             
             return response.content[0].text.strip()
             
