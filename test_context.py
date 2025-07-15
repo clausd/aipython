@@ -192,6 +192,7 @@ class TestMagicCommandsWithContext:
             mock_args = Mock()
             mock_args.execute = False
             mock_args.model = 'claude-3-sonnet-20240229'
+            mock_args.description = ['create', 'a', 'simple', 'print', 'statement']
             mock_parse.return_value = mock_args
             
             # Call the magic command
@@ -199,7 +200,7 @@ class TestMagicCommandsWithContext:
             
             # Verify context was gathered and passed
             magic.ai_client.get_ipython_context.assert_called_once()
-            # The first argument will be the line string, not args.line
+            # The first argument will be the joined description
             call_args = magic.ai_client.generate_code.call_args
             assert call_args[0][0] == "create a simple print statement"
             assert call_args[1]['model'] == 'claude-3-sonnet-20240229'
