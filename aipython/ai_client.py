@@ -63,7 +63,7 @@ Rules:
                 user_message += "\n"
 
         try:
-            response = self.client.chat([
+            response = self.client([
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ], model=model)
@@ -116,7 +116,7 @@ the user's current session to give more relevant answers."""
                 user_message += "\n"
 
         try:
-            response = self.client.chat([
+            response = self.client([
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ], model=model)
