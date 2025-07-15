@@ -16,7 +16,7 @@ class TestContextGathering:
         """Test context gathering when not in IPython."""
         client = AIClient(api_key="test-key")
         
-        with patch('aipython.ai_client.get_ipython', return_value=None):
+        with patch('IPython.get_ipython', return_value=None):
             context = client.get_ipython_context()
             assert context == {}
     
@@ -36,7 +36,7 @@ class TestContextGathering:
         }
         mock_ip.history_manager.get_range.return_value = ['cmd1', 'cmd2', 'cmd3']
         
-        with patch('aipython.ai_client.get_ipython', return_value=mock_ip):
+        with patch('IPython.get_ipython', return_value=mock_ip):
             context = client.get_ipython_context()
             
             # Check that context contains expected variables
@@ -80,7 +80,7 @@ class TestContextGathering:
         }
         mock_ip.history_manager.get_range.return_value = []
         
-        with patch('aipython.ai_client.get_ipython', return_value=mock_ip):
+        with patch('IPython.get_ipython', return_value=mock_ip):
             context = client.get_ipython_context()
             
             variables = context['variables']
@@ -198,11 +198,11 @@ class TestMagicCommandsWithContext:
             
             # Verify context was gathered and passed
             magic.ai_client.get_ipython_context.assert_called_once()
-            magic.ai_client.generate_code.assert_called_once_with(
-                "create a simple print statement",
-                model='claude-3-sonnet-20240229',
-                context={'variables': {'x': {'type': 'int', 'preview': '42'}}}
-            )
+            # The first argument will be the line string, not args.line
+            call_args = magic.ai_client.generate_code.call_args
+            assert call_args[0][0] == "create a simple print statement"
+            assert call_args[1]['model'] == 'claude-3-sonnet-20240229'
+            assert call_args[1]['context'] == {'variables': {'x': {'type': 'int', 'preview': '42'}}}
     
     def test_ai_question_magic_calls_with_context(self):
         """Test that %ai? magic command gathers and passes context."""
