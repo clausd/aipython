@@ -85,7 +85,7 @@ class ConversationTest:
         # Initialize Claude client for evaluation if API key is available
         api_key = os.getenv('ANTHROPIC_API_KEY')
         if api_key:
-            self.claude_client = Client(api_key=api_key)
+            self.claude_client = Client()
         
     def setup_data(self, ipython_mock):
         """Load dataset and run initial setup commands."""
