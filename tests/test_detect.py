@@ -21,7 +21,7 @@ def check(ip, raw, ns=()):
 
 @pytest.mark.parametrize("raw", [
     "x = 1", "print(len([1, 2]))", "df.head()", "for i in range(3):\n    print(i)",
-    "%timeit 1 + 1", "!ls", "df?", "cd /tmp", "ls -la", "pwd", "import os; os.getcwd()",
+    "%timeit 1 + 1", "!ls", "df?", "df.head??", "?df", "np.*load*?", "cd /tmp", "ls -la", "pwd", "import os; os.getcwd()",
 ])
 def test_python_runs_untouched(ip, raw):
     assert check(ip, raw, ns={"df"})
@@ -30,7 +30,7 @@ def test_python_runs_untouched(ip, raw):
 @pytest.mark.parametrize("raw", [
     "show me the top 5 rows of df", "what's the mean of x?", "sort df by price descending",
     "describe", "prnt(x)", "df.groupby(region).sales.sum()", "reset the index of df",
-    "history of my commands",
+    "history of my commands", "what is x?", "how many rows are in df?",
 ])
 def test_non_python_goes_to_ai(ip, raw):
     assert not check(ip, raw, ns={"df", "x"})

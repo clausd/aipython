@@ -13,6 +13,7 @@ import pyflakes.messages
 
 _MAGIC_CALL = re.compile(r"^get_ipython\(\)\.run_line_magic\(")
 _BARE_WORD = re.compile(r"^[A-Za-z][A-Za-z']*$")
+HELP_MAGICS = {"pinfo", "pinfo2", "psearch"}
 
 
 def undefined_names(code, known):
@@ -37,16 +38,20 @@ def _magic_call(code):
     return name, arg
 
 
-def looks_like_prose_automagic(raw, code):
-    """True for e.g. "reset the index of df", which IPython automagic turns into %reset.
+def looks_like_prose_magic(raw, code):
+    """True when IPython turned prose into a magic call.
 
-    Explicit `%magic` lines and argument-like lines ("ls -la", "cd data") are left alone.
+    Two cases: help syntax ("what is x?" becomes `x?`, i.e. %pinfo x) and automagic
+    ("reset the index of df" becomes %reset). Real help requests (`x?`, `?x`, `x??`),
+    explicit `%magic` lines and argument-like lines ("ls -la", "cd data") are left alone.
     """
     if raw.lstrip().startswith("%"):
         return False
     call = _magic_call(code)
     if not call:
         return False
+    if call[0] in HELP_MAGICS:
+        return raw.strip().strip("?").strip() != call[1].strip()
     words = call[1].split()
     return len(words) >= 2 and all(_BARE_WORD.match(w) for w in words)
 
@@ -65,8 +70,8 @@ def classify(raw, code, namespace):
         return False, f"syntax error: {e.msg}"
     if missing:
         return False, "undefined: " + ", ".join(missing)
-    if looks_like_prose_automagic(raw, code):
-        return False, "prose after automagic"
+    if looks_like_prose_magic(raw, code):
+        return False, "prose turned into a magic"
     return True, "ok"
 
 
