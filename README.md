@@ -52,8 +52,7 @@ The default model can also be set with `AIPYTHON_MODEL`.
 ## Development
 
 ```bash
-uv venv && uv pip install -e ".[test]"
-.venv/bin/pytest
+uv run --extra test pytest
 ```
 
 ## Releasing
