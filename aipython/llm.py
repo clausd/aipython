@@ -9,19 +9,16 @@ Models are reached through litellm, so any model string it understands works:
 """
 
 import json
-import os
 import re
 import sys
 
-from . import context
+from . import config, context
 
 MODELS = {
     "haiku": "anthropic/claude-haiku-5-5",
     "sonnet": "anthropic/claude-sonnet-5-5",
     "opus": "anthropic/claude-opus-5-5",
 }
-DEFAULT_MODEL = os.getenv("AIPYTHON_MODEL", MODELS["haiku"])
-API_BASE = os.getenv("AIPYTHON_API_BASE")  # e.g. an OpenAI-compatible local server
 MAX_TOOL_ROUNDS = 4
 
 SYSTEM = """\
@@ -112,17 +109,26 @@ def supports_tools(model):
         return False
 
 
+def provider(model):
+    try:
+        return _litellm().get_llm_provider(model)[1]
+    except Exception:
+        return None
+
+
 class Translator:
-    def __init__(self, model=DEFAULT_MODEL, completion=None):
-        self.model = model
+    def __init__(self, settings=None, completion=None):
+        self.settings = settings or config.Settings()
+        self.model = self.settings.model
         self._completion = completion
 
     def completion(self, **kwargs):
-        if self._completion is not None:
-            return self._completion(**kwargs)
-        if API_BASE:
-            kwargs["api_base"] = API_BASE
-        return _litellm().completion(**kwargs)
+        if self.settings.api_base:
+            kwargs["api_base"] = self.settings.api_base
+        key = self.settings.keys.get(provider(self.model)) if self.settings.keys else None
+        if key:
+            kwargs["api_key"] = key
+        return (self._completion or _litellm().completion)(**kwargs)
 
     def translate(self, shell, request, history=(), last_error=None, out=sys.stdout):
         """Return Python code for `request`, streaming it to `out` as it arrives."""

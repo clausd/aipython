@@ -15,6 +15,7 @@ dependencies = [
     "ipython>=8.0",
     "litellm>=1.109",
     "pyflakes>=3.0",
+    "tomli>=2.0; python_version < '3.11'",
 ]
 keywords = ["ipython", "repl", "ai", "llm", "claude", "openai", "ollama", "natural language", "data science"]
 classifiers = [

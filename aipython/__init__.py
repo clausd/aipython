@@ -17,6 +17,8 @@ def load_ipython_extension(ipython):
         preload()
         _installed = AIShell(ipython)
         _installed.install()
+        for warning in _installed.translator.settings.warnings:
+            print(f"aipython: {warning}")
 
 
 def unload_ipython_extension(ipython):
