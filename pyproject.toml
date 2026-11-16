@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aipython"
+dynamic = ["version"]
+description = "IPython that understands what you meant: non-Python cells are turned into Python by Claude and run."
+readme = "README.md"
+license = "MPL-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Claus Dahl" }]
+requires-python = ">=3.10"
+dependencies = [
+    "ipython>=8.0",
+    "anthropic>=2.9",
+    "pyflakes>=3.0",
+]
+keywords = ["ipython", "repl", "ai", "claude", "natural language", "data science"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Framework :: IPython",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Interpreters",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pandas"]
+
+[project.scripts]
+aipython = "aipython.cli:main"
+
+[tool.hatch.version]
+path = "aipython/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["aipython", "tests", "README.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

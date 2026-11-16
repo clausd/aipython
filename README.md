@@ -1,68 +1,75 @@
-# AI Python - AI-Enhanced IPython
+# aipython — IPython that understands what you meant
 
-Transform your IPython experience with AI-powered code generation and assistance.
+`aipython` is IPython, except cells that aren't valid Python get turned into Python by Claude
+and run. Real Python never touches the model.
 
-## Quick Start
-
-1. **Install**:
-   ```bash
-   pip install aipython
-   ```
-
-2. **Set up your Anthropic API key**:
-   ```bash
-   export ANTHROPIC_API_KEY="your-api-key-here"
-   ```
-
-3. **Launch IPython** - the extension loads automatically:
-   ```bash
-   ipython
-   ```
-
-4. **Try it out**:
-   ```python
-   %ai create a pandas dataframe with sample sales data
-   %ai -e plot a sine wave with matplotlib  
-   %ai? what's the difference between a list and a tuple?
-   ```
-
-## Magic Commands
-
-- **`%ai <description>`** - Generate Python code from natural language
-- **`%ai -e <description>`** - Generate and execute Python code  
-- **`%ai? <question>`** - Ask the AI questions about Python/data science
-
-## Examples
-
-```python
-# Generate code (shows code, doesn't execute)
-%ai create a scatter plot of random data
-
-# Generate and execute immediately
-%ai -e load a CSV file called 'data.csv' into a pandas dataframe
-
-# Ask questions
-%ai? how do I handle missing values in pandas?
-%ai? what does this error mean: KeyError
+```
+In [1]: df = pd.read_csv("sales.csv")
+In [2]: total sales per region, biggest first
+✨ df.groupby('region')['sales'].sum().sort_values(ascending=False)
+Out[2]: ...
+In [3]: prnt(df.shape)
+✨ print(df.shape)
 ```
 
-## Requirements
+## How a cell is handled
 
-- Python 3.8+
-- IPython 7.0+
-- Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable)
+1. IPython's own transforms run first, so `%magics`, `!shell`, `obj?` work as usual.
+2. The result is parsed and checked with pyflakes against your live namespace.
+   It parses and every name resolves → runs untouched, no latency.
+3. Otherwise (syntax error, undefined names like `describe` or `prnt`, or prose after an
+   automagic word like `reset the index of df`) the cell goes to Claude with a summary of
+   your namespace (variables, DataFrame columns and dtypes), recent cells, and the last error.
+   The generated code streams to the terminal and runs. The model can call small tools to look
+   closer (`inspect_variable`, `column_values`, `search_namespace`).
+
+`In[n]` holds the code that ran; up-arrow history keeps what you typed.
+
+## Install
+
+```bash
+pipx install aipython          # or: uv tool install aipython / pip install aipython
+export ANTHROPIC_API_KEY=...
+aipython                       # or, in any IPython: %load_ext aipython
+```
+
+Tip: install it next to your data libraries (`pip install aipython` in the same environment as
+pandas etc.) so generated code can import them.
+
+## Controls
+
+```
+%ai                 status
+%ai on | off        automatic translation on/off
+%ai model sonnet    haiku (default), sonnet, opus, or a full model id
+%ai context         the namespace summary the model sees
+%ai last            last generated code
+%ai <anything>      translate even if it already looks like Python
+```
+
+The default model can also be set with `AIPYTHON_MODEL`.
 
 ## Development
 
 ```bash
-git clone <repo>
-cd aipython
-pip install -e .
+uv venv && uv pip install -e ".[test]"
+.venv/bin/pytest
 ```
 
-## Coming Soon
+## Releasing
 
-- Context awareness (access to your variables and history)
-- Advanced AI tools and integrations
-- Full AI-first REPL mode
-- Multi-provider support
+Releases are published to PyPI by GitHub Actions (`.github/workflows/publish.yml`) using
+[Trusted Publishing](https://docs.pypi.org/trusted-publishers/), so no API token is needed.
+
+One-time setup: on PyPI, add a *pending publisher* for project `aipython` with owner `clausd`,
+repository `aipython`, workflow `publish.yml`, environment `pypi`.
+
+Each release: bump `__version__` in `aipython/__init__.py`, commit, push, then
+
+```bash
+gh release create v0.2.0 --generate-notes
+```
+
+## License
+
+[Mozilla Public License 2.0](LICENSE).
