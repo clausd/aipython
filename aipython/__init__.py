@@ -11,8 +11,10 @@ _installed = None
 
 def load_ipython_extension(ipython):
     global _installed
+    from .llm import preload
     from .shell import AIShell
     if _installed is None:
+        preload()
         _installed = AIShell(ipython)
         _installed.install()
 

@@ -22,7 +22,8 @@ HISTORY_CELLS = 8
 HELP = """\
 %ai                 show status
 %ai on | off        turn automatic translation on or off
-%ai model <name>    haiku, sonnet, opus, or a full model id
+%ai model <name>    haiku, sonnet, opus, or any litellm model, e.g. openai/gpt-5.4,
+                    ollama_chat/qwen2.5-coder
 %ai context         show the namespace summary the model sees
 %ai last            show the last generated code
 %ai <anything>      translate even if it already looks like Python"""

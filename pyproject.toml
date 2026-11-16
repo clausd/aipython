@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "aipython"
 dynamic = ["version"]
-description = "IPython that understands what you meant: non-Python cells are turned into Python by Claude and run."
+description = "IPython that understands what you meant: non-Python cells are turned into Python by an LLM and run."
 readme = "README.md"
 license = "MPL-2.0"
 license-files = ["LICENSE"]
@@ -13,10 +13,10 @@ authors = [{ name = "Claus Dahl" }]
 requires-python = ">=3.10"
 dependencies = [
     "ipython>=8.0",
-    "anthropic>=2.9",
+    "litellm>=1.109",
     "pyflakes>=3.0",
 ]
-keywords = ["ipython", "repl", "ai", "claude", "natural language", "data science"]
+keywords = ["ipython", "repl", "ai", "llm", "claude", "openai", "ollama", "natural language", "data science"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",

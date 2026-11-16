@@ -90,39 +90,50 @@ def test_tools(ip):
     assert is_error
 
 
-# --- Translator tool loop against a fake Anthropic client ---------------------
+# --- Translator tool loop with litellm stream chunks -------------------------
 
-class FakeStream:
-    def __init__(self, message):
-        self.message = message
-        self.text_stream = [b.text for b in message.content if b.type == "text"]
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def get_final_message(self):
-        return self.message
+def _chunk(content=None, tool_call=None, finish=None):
+    from litellm.types.utils import (ChatCompletionDeltaToolCall, Delta, Function,
+                                     ModelResponseStream, StreamingChoices)
+    calls = None
+    if tool_call:
+        calls = [ChatCompletionDeltaToolCall(id=tool_call[0], index=0, type="function",
+                                             function=Function(name=tool_call[1],
+                                                               arguments=tool_call[2]))]
+    return ModelResponseStream(choices=[StreamingChoices(
+        index=0, finish_reason=finish, delta=Delta(content=content, tool_calls=calls))])
 
 
-def test_translator_runs_tools_then_returns_code(ip):
-    tool_use = SimpleNamespace(type="tool_use", id="t1", name="column_values",
-                               input={"variable": "df", "column": "region"})
+def test_translator_runs_tools_then_returns_code(ip, monkeypatch):
+    monkeypatch.setattr("aipython.llm.supports_tools", lambda model: True)
     turns = iter([
-        SimpleNamespace(stop_reason="tool_use", content=[tool_use]),
-        SimpleNamespace(stop_reason="end_turn",
-                        content=[SimpleNamespace(type="text", text="```python\ndf[df.region == 'N']\n```")]),
+        [_chunk(tool_call=("t1", "column_values", '{"variable": "df", "column": "region"}'),
+                finish="tool_calls")],
+        [_chunk("```python\ndf[df.region"), _chunk(" == 'N']\n```", finish="stop")],
     ])
     sent = []
 
-    def stream(**kwargs):
+    def completion(**kwargs):
         sent.append(kwargs)
-        return FakeStream(next(turns))
+        return iter(next(turns))
 
-    client = SimpleNamespace(messages=SimpleNamespace(stream=stream))
-    code = Translator(client=client).translate(ip, "only north", out=io.StringIO())
+    out = io.StringIO()
+    code = Translator(completion=completion).translate(ip, "only north", out=out)
     assert code == "df[df.region == 'N']"
-    tool_result = sent[1]["messages"][-1]["content"][0]
-    assert tool_result["tool_use_id"] == "t1" and "unique=2" in tool_result["content"]
+    assert sent[0]["tools"][0]["type"] == "function"
+    tool_message = sent[1]["messages"][-1]
+    assert tool_message["role"] == "tool" and tool_message["tool_call_id"] == "t1"
+    assert "unique=2" in tool_message["content"]
+    assert "column_values(df, region)" in out.getvalue()
+
+
+def test_models_without_tools_get_none(ip, monkeypatch):
+    monkeypatch.setattr("aipython.llm.supports_tools", lambda model: False)
+    sent = []
+
+    def completion(**kwargs):
+        sent.append(kwargs)
+        return iter([_chunk("df.head()", finish="stop")])
+
+    assert Translator(completion=completion).translate(ip, "peek", out=io.StringIO()) == "df.head()"
+    assert sent[0]["tools"] is None

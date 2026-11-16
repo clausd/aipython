@@ -2,22 +2,26 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-"""Turn natural language / pseudo-Python into runnable Python with Claude."""
+"""Turn natural language / pseudo-Python into runnable Python with any LLM.
 
+Models are reached through litellm, so any model string it understands works:
+"anthropic/claude-haiku-5-5", "openai/gpt-5.4", "ollama_chat/qwen2.5-coder", ...
+"""
+
+import json
 import os
 import re
 import sys
 
-import anthropic
-
 from . import context
 
 MODELS = {
-    "haiku": "claude-haiku-5-5",
-    "sonnet": "claude-sonnet-5-5",
-    "opus": "claude-opus-5-5",
+    "haiku": "anthropic/claude-haiku-5-5",
+    "sonnet": "anthropic/claude-sonnet-5-5",
+    "opus": "anthropic/claude-opus-5-5",
 }
 DEFAULT_MODEL = os.getenv("AIPYTHON_MODEL", MODELS["haiku"])
+API_BASE = os.getenv("AIPYTHON_API_BASE")  # e.g. an OpenAI-compatible local server
 MAX_TOOL_ROUNDS = 4
 
 SYSTEM = """\
@@ -88,52 +92,87 @@ class _Echo:
             self.out.flush()
 
 
-class Translator:
-    def __init__(self, model=DEFAULT_MODEL, client=None):
-        self.model = model
-        self._client = client
+def _litellm():
+    """litellm takes over a second to import, so it is loaded on first use (or in the
+    background at startup, see preload)."""
+    import litellm
+    litellm.suppress_debug_info = True
+    return litellm
 
-    @property
-    def client(self):
-        if self._client is None:
-            self._client = anthropic.Anthropic()
-        return self._client
+
+def preload():
+    import threading
+    threading.Thread(target=_litellm, daemon=True).start()
+
+
+def supports_tools(model):
+    try:
+        return "tools" in (_litellm().get_supported_openai_params(model) or [])
+    except Exception:
+        return False
+
+
+class Translator:
+    def __init__(self, model=DEFAULT_MODEL, completion=None):
+        self.model = model
+        self._completion = completion
+
+    def completion(self, **kwargs):
+        if self._completion is not None:
+            return self._completion(**kwargs)
+        if API_BASE:
+            kwargs["api_base"] = API_BASE
+        return _litellm().completion(**kwargs)
 
     def translate(self, shell, request, history=(), last_error=None, out=sys.stdout):
         """Return Python code for `request`, streaming it to `out` as it arrives."""
-        messages = [{"role": "user",
-                     "content": build_prompt(shell, request, history, last_error)}]
+        messages = [
+            {"role": "system", "content": SYSTEM},
+            {"role": "user", "content": build_prompt(shell, request, history, last_error)},
+        ]
+        tools = context.tool_schemas() if supports_tools(self.model) else None
         echo = _Echo(out)
         try:
             for _ in range(MAX_TOOL_ROUNDS + 1):
-                with self.client.messages.stream(
+                chunks = []
+                for chunk in self.completion(
                     model=self.model,
-                    max_tokens=4096,
-                    system=SYSTEM,
-                    tools=context.tool_schemas(),
-                    output_config={"effort": "low"},
                     messages=messages,
-                ) as stream:
-                    for text in stream.text_stream:
+                    tools=tools,
+                    max_tokens=4096,
+                    reasoning_effort="low",
+                    drop_params=True,
+                    stream=True,
+                ):
+                    chunks.append(chunk)
+                    text = chunk.choices[0].delta.content if chunk.choices else None
+                    if text:
                         echo.write(text)
-                    message = stream.get_final_message()
+                response = _litellm().stream_chunk_builder(chunks, messages=messages)
+                choice = response.choices[0]
+                message = choice.message
 
-                if message.stop_reason == "refusal":
+                if choice.finish_reason == "content_filter":
                     raise RuntimeError("the model declined this request")
-                if message.stop_reason != "tool_use":
-                    return strip_fences("".join(
-                        b.text for b in message.content if b.type == "text"))
+                if not message.tool_calls:
+                    return strip_fences(message.content or "")
 
-                messages.append({"role": "assistant", "content": message.content})
-                results = []
-                for block in message.content:
-                    if block.type != "tool_use":
-                        continue
-                    echo.note(f"{block.name}({', '.join(map(str, block.input.values()))})")
-                    text, is_error = context.run_tool(shell, block.name, block.input)
-                    results.append({"type": "tool_result", "tool_use_id": block.id,
-                                    "content": text, "is_error": is_error})
-                messages.append({"role": "user", "content": results})
+                messages.append({
+                    "role": "assistant",
+                    "content": message.content,
+                    "tool_calls": [call.model_dump() for call in message.tool_calls],
+                })
+                for call in message.tool_calls:
+                    name = call.function.name
+                    try:
+                        args = json.loads(call.function.arguments or "{}")
+                    except json.JSONDecodeError as e:
+                        text, is_error = f"invalid JSON arguments: {e}", True
+                    else:
+                        echo.note(f"{name}({', '.join(map(str, args.values()))})")
+                        text, is_error = context.run_tool(shell, name, args)
+                    messages.append({"role": "tool", "tool_call_id": call.id,
+                                     "content": f"Error: {text}" if is_error else text})
             raise RuntimeError("gave up after too many lookups")
         finally:
             echo.close()

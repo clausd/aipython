@@ -171,17 +171,20 @@ TOOLS = {
 
 
 def tool_schemas():
+    """Tool definitions in the OpenAI function format that litellm translates per provider."""
     return [
         {
-            "name": name,
-            "description": spec["description"],
-            "input_schema": {
-                "type": "object",
-                "properties": spec["properties"],
-                "required": list(spec["properties"]),
-                "additionalProperties": False,
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": spec["description"],
+                "parameters": {
+                    "type": "object",
+                    "properties": spec["properties"],
+                    "required": list(spec["properties"]),
+                    "additionalProperties": False,
+                },
             },
-            "strict": True,
         }
         for name, (_, spec) in TOOLS.items()
     ]
