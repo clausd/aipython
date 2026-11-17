@@ -6,6 +6,9 @@
 
     model = "anthropic/claude-haiku-5-5"
     api_base = "http://localhost:1234/v1"   # optional, for OpenAI-compatible servers
+    log = true                              # write each session as a .py file (default off)
+    debug = true                            # also log the full model exchange (default off)
+    log_dir = "~/somewhere"                 # default ~/.local/share/aipython/sessions
 
     [keys]                                  # per provider; else the provider's env var
     anthropic = "sk-ant-..."
@@ -26,6 +29,11 @@ else:
 DEFAULT_MODEL = "anthropic/claude-haiku-5-5"
 
 
+def default_log_dir():
+    base = Path(os.getenv("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+    return base / "aipython" / "sessions"
+
+
 def config_path():
     if os.getenv("AIPYTHON_CONFIG"):
         return Path(os.environ["AIPYTHON_CONFIG"]).expanduser()
@@ -38,6 +46,9 @@ class Settings:
     model: str = DEFAULT_MODEL
     api_base: str | None = None
     keys: dict = field(default_factory=dict)
+    log: bool = False
+    debug: bool = False
+    log_dir: Path = field(default_factory=default_log_dir)
     path: Path | None = None
     warnings: list = field(default_factory=list)
 
@@ -55,6 +66,10 @@ def load(path=None):
         settings.model = data.get("model", settings.model)
         settings.api_base = data.get("api_base")
         settings.keys = dict(data.get("keys", {}))
+        settings.log = bool(data.get("log", False))
+        settings.debug = bool(data.get("debug", False))
+        if data.get("log_dir"):
+            settings.log_dir = Path(data["log_dir"]).expanduser()
         if settings.keys and os.name == "posix" and path.stat().st_mode & (stat.S_IRWXG | stat.S_IRWXO):
             settings.warnings.append(
                 f"{path} holds API keys but is readable by others; run: chmod 600 {path}")

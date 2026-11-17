@@ -80,6 +80,58 @@ The model gets enough context to write code that fits your session:
 
 `In[n]` holds the code that actually ran. Up-arrow brings back what you typed.
 
+## Token use
+
+Each translation ends with one dim line showing what it cost:
+
+```
+In [2]: list the column names
+✨ df.columns.tolist()
+   ↳ 1,204 in · 14 out · $0.0001 · 0.8s
+```
+
+`%ai` shows the running total for the session, and it is printed when you exit:
+
+```
+aipython: 12 translations · 15,880 in / 702 out tokens · $0.0019
+```
+
+Costs come from litellm's price list. They are left out for models without a known price, and
+for free local models; token counts are always shown.
+
+## Session logs
+
+Off by default. Turn on with `%ai log on`, or `log = true` in the config file, and the session
+is written as a Python file: every cell in order, with what you typed as a comment above the
+code the model wrote for it.
+
+```python
+# [1] Find the most recent csv in ~/Downloads and load it as a pandas df
+#     ✨ anthropic/claude-haiku-5-5 · 1,204 in · 61 out · $0.0002 · 1.1s
+import glob, os
+import pandas as pd
+...
+
+# [6]
+df.date.min()
+
+# [11]
+df.date.uniq()
+# ! AttributeError: 'Series' object has no attribute 'uniq'
+```
+
+It reads as the Python your session became, and `ipython <file>` replays it. Logs go to
+`~/.local/share/aipython/sessions/` (or `$XDG_DATA_HOME/aipython/sessions/`, or `log_dir` in the
+config), one file per session, named by start time. `%ai log` shows the current file.
+
+To see everything the model was given and did (the variable summary, recent cells, tool calls
+and their results, token counts), turn on the debug log with `%ai debug on` or `debug = true`.
+It writes one JSON line per translation to a `.jsonl` file next to the session log. The two
+logs are independent.
+
+Even with both off, IPython's own history keeps both versions of every cell: `%history` lists
+the code that ran, `%history -r` what you typed.
+
 ## What is sent to the model
 
 Only cells that aren't Python are sent. With each one goes the variable summary above,
@@ -92,12 +144,14 @@ local model (see below) or `%ai off`.
 ## Commands
 
 ```
-%ai                 status
+%ai                 status and tokens used this session
 %ai on | off        turn automatic translation on or off
 %ai model <name>    haiku (default), sonnet, opus, or any litellm model
 %ai config          settings, config file location, which key is in use
 %ai context         the variable summary the model sees
 %ai last            the last generated code
+%ai log [on | off]  write this session as a .py file (off by default); show where
+%ai debug on | off  also log the full exchange with the model (.jsonl)
 %ai <anything>      send this to the model even if it looks like Python
 ```
 
@@ -128,6 +182,9 @@ the default model. To keep settings and keys in one place, create
 ```toml
 model = "anthropic/claude-sonnet-5-5"
 # api_base = "http://localhost:1234/v1"
+# log = true               # write each session as a .py file (default false)
+# debug = true             # also log the full exchange with the model (default false)
+# log_dir = "~/notes/aipython"
 
 [keys]                     # one per provider, used when that provider's model is selected
 anthropic = "sk-ant-..."

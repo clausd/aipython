@@ -11,6 +11,8 @@ Models are reached through litellm, so any model string it understands works:
 import json
 import re
 import sys
+import time
+from dataclasses import dataclass, field
 
 from . import config, context
 
@@ -88,6 +90,44 @@ class _Echo:
             self.out.write(f"{RESET}\n")
             self.out.flush()
 
+    def usage(self, translation):
+        self.close()
+        self.started = False
+        self.out.write(f"{DIM}   ↳ {translation.usage_text()}{RESET}\n")
+        self.out.flush()
+
+
+def format_cost(cost):
+    if cost >= 1:
+        return f"${cost:.2f}"
+    return f"${cost:.4f}" if cost >= 0.0001 else "<$0.0001"
+
+
+@dataclass
+class Translation:
+    """Generated code plus what it cost. `messages` is the full exchange, for debug logs."""
+    code: str
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost: float | None = None
+    seconds: float = 0.0
+    messages: list = field(default_factory=list)
+
+    def usage_text(self):
+        parts = [f"{self.input_tokens:,} in · {self.output_tokens:,} out"]
+        if self.cost:
+            parts.append(format_cost(self.cost))
+        parts.append(f"{self.seconds:.1f}s")
+        return " · ".join(parts)
+
+
+def _cost(response, model):
+    try:
+        return _litellm().completion_cost(completion_response=response, model=model)
+    except Exception:
+        return None
+
 
 def _litellm():
     """litellm takes over a second to import, so it is loaded on first use (or in the
@@ -131,7 +171,9 @@ class Translator:
         return (self._completion or _litellm().completion)(**kwargs)
 
     def translate(self, shell, request, history=(), last_error=None, out=sys.stdout):
-        """Return Python code for `request`, streaming it to `out` as it arrives."""
+        """Return a Translation for `request`, streaming the code to `out` as it arrives."""
+        result = Translation(code="", model=self.model)
+        started = time.monotonic()
         messages = [
             {"role": "system", "content": SYSTEM},
             {"role": "user", "content": build_prompt(shell, request, history, last_error)},
@@ -149,6 +191,7 @@ class Translator:
                     reasoning_effort="low",
                     drop_params=True,
                     stream=True,
+                    stream_options={"include_usage": True},
                 ):
                     chunks.append(chunk)
                     text = chunk.choices[0].delta.content if chunk.choices else None
@@ -157,11 +200,22 @@ class Translator:
                 response = _litellm().stream_chunk_builder(chunks, messages=messages)
                 choice = response.choices[0]
                 message = choice.message
+                if response.usage:
+                    result.input_tokens += response.usage.prompt_tokens or 0
+                    result.output_tokens += response.usage.completion_tokens or 0
+                cost = _cost(response, self.model)
+                if cost is not None:
+                    result.cost = (result.cost or 0) + cost
 
                 if choice.finish_reason == "content_filter":
                     raise RuntimeError("the model declined this request")
                 if not message.tool_calls:
-                    return strip_fences(message.content or "")
+                    messages.append({"role": "assistant", "content": message.content})
+                    result.code = strip_fences(message.content or "")
+                    result.seconds = time.monotonic() - started
+                    result.messages = messages
+                    echo.usage(result)
+                    return result
 
                 messages.append({
                     "role": "assistant",
