@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/aipython
+      url: https://pypi.org/p/aipython-shell
     permissions:
       id-token: write
     steps:

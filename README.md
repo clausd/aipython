@@ -3,7 +3,7 @@
 **IPython that understands what you meant.**
 
 [![CI](https://github.com/clausd/aipython/actions/workflows/ci.yml/badge.svg)](https://github.com/clausd/aipython/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/aipython)](https://pypi.org/project/aipython/)
+[![PyPI](https://img.shields.io/pypi/v/aipython-shell)](https://pypi.org/project/aipython-shell/)
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue)](LICENSE)
 
 `aipython` is a plain IPython shell with one difference: when a cell isn't valid Python, an LLM
@@ -46,7 +46,7 @@ Cells 6 and 9 are ordinary Python, so they ran directly without a model call.
 ## Install
 
 ```bash
-pipx install aipython            # or: uv tool install aipython / pip install aipython
+pipx install aipython-shell      # or: uv tool install aipython-shell / pip install aipython-shell
 export ANTHROPIC_API_KEY=...      # the default model is Claude Haiku
 aipython
 ```
@@ -54,7 +54,7 @@ aipython
 Or load it into any IPython session with `%load_ext aipython`.
 
 If you work with pandas and friends, install aipython into the same environment as them
-(`pip install aipython`) so the generated code can import them. A `pipx` install lives in its own
+(`pip install aipython-shell`) so the generated code can import them. A `pipx` install lives in its own
 environment.
 
 ## How it works
@@ -218,7 +218,10 @@ Releases go to PyPI through GitHub Actions with
 [Trusted Publishing](https://docs.pypi.org/trusted-publishers/). To release, bump `__version__`
 in `aipython/__init__.py`, push, and run `gh release create vX.Y.Z --generate-notes`.
 
-One-time setup on PyPI: add a pending publisher for project `aipython`, owner `clausd`,
+The PyPI project is `aipython-shell` (`aipython` is taken by its similarity to `ai-python`); the
+package, the command and `%load_ext` are all `aipython`.
+
+One-time setup on PyPI: add a pending publisher for project `aipython-shell`, owner `clausd`,
 repository `aipython`, workflow `publish.yml`, environment `pypi`.
 
 ## License

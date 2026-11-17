@@ -3,7 +3,7 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aipython"
+name = "aipython-shell"
 dynamic = ["version"]
 description = "IPython that understands what you meant: non-Python cells are turned into Python by an LLM and run."
 readme = "README.md"
@@ -38,6 +38,9 @@ aipython = "aipython.cli:main"
 
 [tool.hatch.version]
 path = "aipython/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aipython"]
 
 [tool.hatch.build.targets.sdist]
 include = ["aipython", "tests", "README.md", "LICENSE"]
