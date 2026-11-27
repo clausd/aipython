@@ -46,16 +46,44 @@ Cells 6 and 9 are ordinary Python, so they ran directly without a model call.
 ## Install
 
 ```bash
-pipx install aipython-shell      # or: uv tool install aipython-shell / pip install aipython-shell
-export ANTHROPIC_API_KEY=...      # the default model is Claude Haiku
+uv tool install 'aipython-shell[data]'   # with pandas, numpy and matplotlib
+export ANTHROPIC_API_KEY=...             # the default model is Claude Haiku
 aipython
 ```
 
 Or load it into any IPython session with `%load_ext aipython`.
 
-If you work with pandas and friends, install aipython into the same environment as them
-(`pip install aipython-shell`) so the generated code can import them. A `pipx` install lives in its own
-environment.
+### Getting your libraries into the shell
+
+`uv tool install` and `pipx` give aipython an environment of its own, so the code it writes can
+only import what is installed there. There are three ways to add more:
+
+- **At install time.** Name the packages with `--with`. Running the command again with more
+  packages updates the existing install:
+
+  ```bash
+  uv tool install aipython-shell --with polars --with scikit-learn
+  ```
+
+- **From inside the shell.** When a cell fails because a module is missing, aipython says what to
+  do:
+
+  ```
+  ModuleNotFoundError: No module named 'polars'
+  aipython: polars isn't installed here. Install it with:  %ai install polars
+     to keep it for good:  uv tool install aipython-shell --with polars
+  ```
+
+  `%ai install polars` installs into the running environment, using uv if it is available and
+  pip otherwise. `%pip` doesn't work in a uv tool environment, because those have no pip. The
+  package can be imported straight away, so press up-arrow and run the cell again. It may not
+  survive reinstalling aipython; the `--with` form does.
+
+- **From a project.** Activate the project's virtualenv before starting aipython, and IPython
+  adds that environment's packages to the path. It prints a harmless "Attempting to work in a
+  virtualenv" warning. This works best when the virtualenv uses the same Python version as
+  aipython. Alternatively, install aipython into the project itself with
+  `uv add --dev aipython-shell` or `pip install aipython-shell`.
 
 ## How it works
 
@@ -152,6 +180,7 @@ local model (see below) or `%ai off`.
 %ai last            the last generated code
 %ai log [on | off]  write this session as a .py file (off by default); show where
 %ai debug on | off  also log the full exchange with the model (.jsonl)
+%ai install <pkg>   install packages into the environment aipython runs in
 %ai <anything>      send this to the model even if it looks like Python
 ```
 

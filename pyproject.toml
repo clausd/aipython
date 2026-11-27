@@ -31,6 +31,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+data = ["pandas", "numpy", "matplotlib"]
 test = ["pytest", "pandas"]
 
 [project.scripts]

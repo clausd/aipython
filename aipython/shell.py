@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 from IPython.core.magic import Magics, line_magic, magics_class
 
-from . import config, context, detect
+from . import config, context, detect, install
 from .llm import MODELS, Translator, format_cost, provider
 from .log import SessionLog
 
@@ -31,6 +31,7 @@ HELP = """\
 %ai context         show the namespace summary the model sees
 %ai log [on | off]  log this session as a .py file (off by default), show where
 %ai debug on | off  also log the full exchange with the model (.jsonl)
+%ai install <pkg>   install packages into the environment aipython runs in
 %ai last            show the last generated code
 %ai <anything>      translate even if it already looks like Python"""
 
@@ -115,6 +116,9 @@ class AIShell:
         self.last_error = f"{type(error).__name__}: {error}" if error is not None else None
         if not raw.strip():
             return
+        missing = install.hint(error)
+        if missing:
+            print(missing, file=sys.stderr)
         generated = self._translation.code if self._translation else None
         self.history.append({"raw": raw.strip(), "code": generated, "error": self.last_error})
         is_control = not self._translation and raw.lstrip().startswith("%ai")
@@ -152,7 +156,7 @@ class AIShell:
 
 @magics_class
 class Magic(Magics):
-    SUBCOMMANDS = {"on", "off", "model", "config", "context", "last", "log", "debug", "help"}
+    SUBCOMMANDS = {"on", "off", "model", "config", "context", "last", "log", "debug", "install", "help"}
 
     def __init__(self, shell, ai):
         super().__init__(shell)
@@ -179,6 +183,12 @@ class Magic(Magics):
             if arg in ("on", "off"):
                 setattr(self.ai.log, "enabled" if cmd == "log" else "debug", arg == "on")
             self.show_log()
+            return
+        elif cmd == "install":
+            if not arg.split():
+                print("usage: %ai install <package> ...")
+            elif install.install(arg.split()):
+                print("installed; run the cell again (up-arrow)")
             return
         elif cmd == "help":
             print(HELP)

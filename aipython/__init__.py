@@ -4,7 +4,7 @@
 
 """Seamless AI for IPython: type Python or describe what you want."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 _installed = None
 

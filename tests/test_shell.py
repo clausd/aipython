@@ -200,3 +200,16 @@ def test_models_without_tools_get_none(ip, monkeypatch):
     result = Translator(completion=completion).translate(ip, "peek", out=io.StringIO())
     assert result.code == "df.head()"
     assert sent[0]["tools"] is None
+
+
+def test_missing_module_hint(ip, ai, capsys):
+    ip.run_cell("import surely_not_a_real_module_xyz")
+    assert "%ai install surely_not_a_real_module_xyz" in capsys.readouterr().err
+
+
+def test_ai_install(ip, ai, monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr("aipython.install.install", lambda pkgs: calls.append(pkgs) or True)
+    ip.run_cell("%ai install polars numpy")
+    assert calls == [["polars", "numpy"]]
+    assert "installed" in capsys.readouterr().out
